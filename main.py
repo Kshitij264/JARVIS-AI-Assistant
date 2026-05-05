@@ -1,43 +1,41 @@
+import sys
+import threading
+
+from PyQt5.QtWidgets import QApplication
+
 from core.state_manager import StateManager
 from core.command_router import CommandRouter
 from core.response_engine import ResponseEngine
 from states.jarvis_states import JarvisState
 from system.app_controller import AppController
-from system.voice_engine import VoiceEngine
+from ui.hud import JarvisHUD
 
 
-def main():
-    state_manager = StateManager()
-    command_router = CommandRouter()
-    response_engine = ResponseEngine()
-    app_controller = AppController()
-    voice_engine = VoiceEngine()
-
-    print("JARVIS initialized.")
-    state_manager.set_state(JarvisState.OFF)
+# ==============================
+# BACKEND LOOP (RUNS IN THREAD)
+# ==============================
+def run_jarvis(state_manager, command_router, app_controller):
 
     while True:
 
         # ==============================
-        # OFF STATE (WAIT FOR ENTER)
+        # OFF STATE
         # ==============================
         if state_manager.get_state() == JarvisState.OFF:
             input("\nPress ENTER to activate JARVIS...")
             state_manager.set_state(JarvisState.IDLE)
 
-            # Greeting
             state_manager.set_state(JarvisState.SPEAKING)
             greeting = "Hi Kshitij, how can I help you today?"
             print(f"JARVIS: {greeting}")
-            voice_engine.speak(greeting)
             state_manager.set_state(JarvisState.IDLE)
 
         # ==============================
-        # ON STATE (VOICE LOOP)
+        # ACTIVE LOOP
         # ==============================
         while state_manager.get_state() != JarvisState.OFF:
 
-            command = voice_engine.listen()
+            command = input("You: ")
 
             if not command:
                 continue
@@ -46,16 +44,16 @@ def main():
             action = command_router.route(command)
 
             # ------------------------------
-            # SHUTDOWN COMMAND
+            # SHUTDOWN
             # ------------------------------
             if action == "SHUTDOWN":
                 state_manager.set_state(JarvisState.SPEAKING)
-                voice_engine.speak("Understood. Going offline.")
+                print("JARVIS: Going offline.")
                 state_manager.set_state(JarvisState.OFF)
                 break
 
             # ------------------------------
-            # OPEN COMMAND
+            # OPEN
             # ------------------------------
             elif action == "OPEN_COMMAND":
                 opened = app_controller.open_application(command)
@@ -64,32 +62,65 @@ def main():
 
                 state_manager.set_state(JarvisState.SPEAKING)
                 if opened:
-                    voice_engine.speak("Opening as instructed.")
+                    print("JARVIS: Opening as instructed.")
                 else:
-                    voice_engine.speak("I could not find that application.")
+                    print("JARVIS: Could not find that application.")
 
             # ------------------------------
             # WEATHER
             # ------------------------------
             elif action == "WEATHER_QUERY":
                 state_manager.set_state(JarvisState.SPEAKING)
-                voice_engine.speak("Weather functionality is not implemented yet.")
+                print("JARVIS: Weather not implemented yet.")
 
             # ------------------------------
             # SYSTEM CHECK
             # ------------------------------
             elif action == "SYSTEM_QUERY":
                 state_manager.set_state(JarvisState.SPEAKING)
-                voice_engine.speak("All systems are functioning normally.")
+                print("JARVIS: All systems are functioning normally.")
 
             # ------------------------------
             # UNKNOWN
             # ------------------------------
             else:
                 state_manager.set_state(JarvisState.SPEAKING)
-                voice_engine.speak("I did not understand that command.")
+                print("JARVIS: I did not understand that command.")
 
             state_manager.set_state(JarvisState.IDLE)
+
+
+# ==============================
+# MAIN (UI THREAD)
+# ==============================
+def main():
+    app = QApplication(sys.argv)
+
+    # UI
+    hud = JarvisHUD()
+    hud.show()
+
+    # Core systems
+    state_manager = StateManager()
+    command_router = CommandRouter()
+    app_controller = AppController()
+
+    # Connect UI to state
+    state_manager.subscribe(hud.state_signal.emit)
+
+    print("JARVIS initialized.")
+    state_manager.set_state(JarvisState.OFF)
+
+    # Run backend in separate thread
+    jarvis_thread = threading.Thread(
+        target=run_jarvis,
+        args=(state_manager, command_router, app_controller),
+        daemon=True
+    )
+    jarvis_thread.start()
+
+    # Start Qt event loop (CRITICAL)
+    sys.exit(app.exec_())
 
 
 if __name__ == "__main__":
