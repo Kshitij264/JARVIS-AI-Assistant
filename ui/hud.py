@@ -1,6 +1,6 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene
-from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QGraphicsView, QGraphicsScene, QGraphicsEllipseItem
+from PyQt5.QtSvg import QGraphicsSvgItem
 from PyQt5.QtCore import Qt
 from states.jarvis_states import JarvisState
 from PyQt5.QtCore import QPropertyAnimation, QRect, QEasingCurve, QTimer
@@ -15,12 +15,12 @@ class JarvisHUD(QWidget):
         self.setWindowTitle("JARVIS HUD")
         self.pulse_anim = None
         self.rotation_anim = None
-        # Remove window frame
         self.setWindowFlags(
-            Qt.FramelessWindowHint |
-            Qt.WindowStaysOnTopHint |
-            Qt.Tool
+            Qt.FramelessWindowHint
         )
+
+        # Send window to bottom (wallpaper behavior)
+        self.setWindowFlag(Qt.WindowStaysOnBottomHint, True)
 
         # Transparent background
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -30,41 +30,73 @@ class JarvisHUD(QWidget):
         self.setLayout(layout)
 
         # Load SVG
-        from PyQt5.QtSvg import QGraphicsSvgItem
+        
 
         self.view = QGraphicsView()
         self.scene = QGraphicsScene()
         self.view.setScene(self.scene)
+        self.view.setAlignment(Qt.AlignCenter)
+        self.scene.setBackgroundBrush(Qt.transparent)
 
         # Remove scrollbars completely
         self.view.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         # Remove borders & background
-        self.view.setStyleSheet("background: transparent; border: none;")
+        self.view.setStyleSheet("background: rgba(0,0,0,0); border: none;")
+        self.view.setFrameShape(QGraphicsView.NoFrame)
 
         # Disable dragging
         self.view.setDragMode(QGraphicsView.NoDrag)
 
         self.svg_item = QGraphicsSvgItem("jarvis_core_master.svg")
-        self.svg_item.setScale(0.5)
+        self.svg_item.setScale(1.0)
 
         self.scene.addItem(self.svg_item)
+
+        # --- CLIPPING MASK (REMOVE RECTANGLE VISUALLY) ---
+        rect = self.svg_item.boundingRect()
+
+        mask = QGraphicsEllipseItem(rect)
+        from PyQt5.QtGui import QPen
+        mask.setPen(QPen(Qt.NoPen))
+        mask.setBrush(Qt.transparent)
+
+        self.svg_item.setParentItem(mask)
+        self.scene.addItem(mask)
+
+        rect = self.svg_item.boundingRect()
+
+        # Set pivot
+        self.svg_item.setTransformOriginPoint(rect.center())
+
+        # Move SVG to scene center
+        self.svg_item.setPos(0, 0)
+        mask.setPos(-rect.width()/2, -rect.height()/2)
+        # Glow disabled
+        self.svg_item.setGraphicsEffect(None)
 
         # Set transform origin to center (VERY IMPORTANT)
         rect = self.svg_item.boundingRect()
         self.svg_item.setTransformOriginPoint(rect.center())
 
         # Fit SVG inside view
-        self.view.fitInView(self.svg_item, Qt.KeepAspectRatio)
-        self.scene.setSceneRect(self.svg_item.boundingRect())
+        rect = self.svg_item.boundingRect()
+
+        # Make scene centered around (0,0)
+        self.scene.setSceneRect(
+            -rect.width()/2,
+            -rect.height()/2,
+            rect.width(),
+            rect.height()
+        )
         layout.addWidget(self.view)
 
         # Resize window
-        self.resize(400, 400)
+        screen = QApplication.primaryScreen().geometry()
+        self.setGeometry(screen)
 
     # Center screen
-        self.center_on_screen()
         self.start_rotation()   # ALWAYS ROTATE
 
 
@@ -76,30 +108,34 @@ class JarvisHUD(QWidget):
 
 
     def update_state(self, state):
-        # Stop previous animations
+
         if hasattr(self, "pulse_timer") and state != JarvisState.LISTENING:
             self.pulse_timer.stop()
 
-
         if state == JarvisState.OFF:
             self.setWindowOpacity(0.3)
+            pass
 
         elif state == JarvisState.IDLE:
             self.setWindowOpacity(0.6)
+            pass
 
         elif state == JarvisState.LISTENING:
             self.setWindowOpacity(0.9)
+            pass
             self.start_pulse()
 
         elif state == JarvisState.THINKING:
             self.setWindowOpacity(1.0)
-            self.start_rotation()
+            pass
 
         elif state == JarvisState.SPEAKING:
             self.setWindowOpacity(1.0)
+            pass
 
         elif state == JarvisState.EXECUTING:
             self.setWindowOpacity(1.0)
+            pass
 
 
     def start_pulse(self):
