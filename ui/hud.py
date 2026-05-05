@@ -63,12 +63,11 @@ class JarvisHUD(QWidget):
         mask.setBrush(Qt.transparent)
 
         self.svg_item.setParentItem(mask)
+        mask.setTransformOriginPoint(478, 430)
         self.scene.addItem(mask)
 
-        rect = self.svg_item.boundingRect()
-
-        # Set pivot
-        self.svg_item.setTransformOriginPoint(rect.center())
+        # Use exact SVG center (from your SVG code)
+        self.svg_item.setTransformOriginPoint(478, 430)
 
         # Move SVG to scene center
         self.svg_item.setPos(0, 0)
@@ -76,9 +75,8 @@ class JarvisHUD(QWidget):
         # Glow disabled
         self.svg_item.setGraphicsEffect(None)
 
-        # Set transform origin to center (VERY IMPORTANT)
-        rect = self.svg_item.boundingRect()
-        self.svg_item.setTransformOriginPoint(rect.center())
+        # DO NOT override origin — keep SVG center
+        pass
 
         # Fit SVG inside view
         rect = self.svg_item.boundingRect()
@@ -174,7 +172,7 @@ class JarvisHUD(QWidget):
 
     def rotate_step(self):
         self.angle += 2
-        self.svg_item.setRotation(self.angle)
+        self.svg_item.parentItem().setRotation(self.angle)
 
     # DEBUG (optional)
     # print("rotating:", self.angle)
