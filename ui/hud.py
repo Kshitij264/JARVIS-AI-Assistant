@@ -112,47 +112,91 @@ class JarvisHUD(QWidget):
 
         if state == JarvisState.OFF:
             self.setWindowOpacity(0.3)
-            pass
+
+    # Slow breathing while dormant
+            self.start_pulse(
+        min_scale=0.97,
+        max_scale=1.01,
+        speed=80
+    )
 
         elif state == JarvisState.IDLE:
-            self.setWindowOpacity(0.6)
-            pass
+
+            self.setWindowOpacity(0.75)
+
+            # Soft idle breathing
+            self.start_pulse(
+                min_scale=0.99,
+                max_scale=1.02,
+                speed=60
+    )
 
         elif state == JarvisState.LISTENING:
-            self.setWindowOpacity(0.9)
-            pass
-            self.start_pulse()
+
+            self.setWindowOpacity(1.0)
+
+    # Strong listening pulse
+            self.start_pulse(
+                min_scale=0.97,
+                max_scale=1.05,
+                speed=18
+    )
 
         elif state == JarvisState.THINKING:
+
             self.setWindowOpacity(1.0)
-            pass
+
+            # Aggressive thinking pulse
+            self.start_pulse(
+                min_scale=0.96,
+                max_scale=1.06,
+                speed=10
+            )
 
         elif state == JarvisState.SPEAKING:
+
             self.setWindowOpacity(1.0)
-            pass
+
+            # Calm speaking animation
+            self.start_pulse(
+                min_scale=0.98,
+                max_scale=1.03,
+                speed=30
+            )
 
         elif state == JarvisState.EXECUTING:
             self.setWindowOpacity(1.0)
             pass
 
 
-    def start_pulse(self):
-        self.scale_value = 0.5
+    def start_pulse(
+        self,
+        min_scale=0.95,
+        max_scale=1.05,
+        speed=30
+):
+
+        self.min_scale = min_scale
+        self.max_scale = max_scale
+
+        self.scale_value = 1.0
         self.growing = True
 
         self.pulse_timer = QTimer()
+
         self.pulse_timer.timeout.connect(self.pulse_step)
-        self.pulse_timer.start(30)
+
+        self.pulse_timer.start(speed)
 
 
     def pulse_step(self):
         if self.growing:
-            self.scale_value += 0.005
-            if self.scale_value >= 0.6:
+            self.scale_value += 0.002
+            if self.scale_value >= self.max_scale:
                 self.growing = False
         else:
-            self.scale_value -= 0.005
-            if self.scale_value <= 0.5:
+            self.scale_value -= 0.002
+            if self.scale_value <= self.min_scale:
                 self.growing = True
 
         self.svg_item.setScale(self.scale_value)

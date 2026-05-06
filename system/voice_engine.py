@@ -16,10 +16,35 @@ class VoiceEngine:
 
         # Speech Recognition
         self.recognizer = sr.Recognizer()
+        # Recognition tuning
+        self.recognizer.energy_threshold = 80
+        self.recognizer.dynamic_energy_threshold = False
+        self.recognizer.pause_threshold = 0.8
+        self.recognizer.phrase_threshold = 0.3
+        self.recognizer.non_speaking_duration = 0.5
+        print("\n========== AVAILABLE MICROPHONES ==========")
 
-        # Force correct microphone (Device 1 from your list)
-        self.microphone = sr.Microphone(device_index=1)
+        for index, name in enumerate(sr.Microphone.list_microphone_names()):
+            print(f"{index}: {name}")
 
+        print("==========================================\n")
+
+        # TEMP DEFAULT MIC
+        print("\n========== AVAILABLE MICROPHONES ==========")
+
+        mic_list = sr.Microphone.list_microphone_names()
+
+        for index, name in enumerate(mic_list):
+            print(f"{index}: {name}")
+
+        print("==========================================\n")
+
+        # CHANGE INDEX AFTER CHECKING TERMINAL
+        self.microphone = sr.Microphone(device_index=0)
+        # One-time ambient calibration
+        with self.microphone as source:
+            print("[VOICE] Calibrating microphone...")
+            self.recognizer.adjust_for_ambient_noise(source, duration=2)
         # Coqui TTS Model (Male Voice)
         self.tts = TTS(
             model_name="tts_models/en/vctk/vits",
@@ -37,10 +62,15 @@ class VoiceEngine:
         try:
             with self.microphone as source:
                 print("[VOICE] Adjusting for ambient noise...")
-                self.recognizer.adjust_for_ambient_noise(source, duration=1)
+                pass
 
                 print("[VOICE] Listening...")
-                audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
+                print("[WAKE] Waiting for speech...")
+                audio = self.recognizer.listen(
+    source,
+    timeout=4,
+    phrase_time_limit=8
+)
 
             try:
                 command = self.recognizer.recognize_google(audio)
@@ -56,49 +86,35 @@ class VoiceEngine:
                 return ""
 
         except Exception as e:
-            print(f"[VOICE] Microphone error: {e}")
+            print(f"[VOICE ERROR] {e}")
             return ""
 
         # ==============================
     # WAKE WORD LISTENER
     # ==============================
     def listen_for_wake_word(self):
-
         print("[WAKE] Listening for wake word...")
-
         try:
+
             with self.microphone as source:
 
-                self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                pass
 
-                while True:
+                audio = self.recognizer.listen(
+                    source,
+                    timeout=None,
+                    phrase_time_limit=3
+                )
 
-                    try:
-                        audio = self.recognizer.listen(
-                            source,
-                            timeout=None,
-                            phrase_time_limit=3
-                        )
+            text = self.recognizer.recognize_google(audio).lower()
 
-                        text = self.recognizer.recognize_google(audio).lower()
+            print(f"[WAKE HEARD] {text}")
 
-                        print(f"[WAKE HEARD] {text}")
-
-                        for wake_word in WAKE_WORDS:
-                            if wake_word in text:
-                                print("[WAKE] Jarvis activated.")
-                                return True
-
-                    except sr.UnknownValueError:
-                        pass
-
-                    except Exception as e:
-                        print(f"[WAKE ERROR] {e}")
+            return any(word in text for word in WAKE_WORDS)
 
         except Exception as e:
-            print(f"[MIC ERROR] {e}")
-
-        return False
+            print(f"[WAKE ERROR] {e}")
+            return False
 
 
     # ==============================
