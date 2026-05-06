@@ -5,7 +5,11 @@ import soundfile as sf
 import tempfile
 import os
 
-
+WAKE_WORDS = [
+    "jarvis",
+    "hey jarvis",
+    "ok jarvis"
+]
 class VoiceEngine:
     def __init__(self):
         print("[VOICE] Loading Neural Male Voice Model... (First time may take 20-30 sec)")
@@ -54,6 +58,48 @@ class VoiceEngine:
         except Exception as e:
             print(f"[VOICE] Microphone error: {e}")
             return ""
+
+        # ==============================
+    # WAKE WORD LISTENER
+    # ==============================
+    def listen_for_wake_word(self):
+
+        print("[WAKE] Listening for wake word...")
+
+        try:
+            with self.microphone as source:
+
+                self.recognizer.adjust_for_ambient_noise(source, duration=0.5)
+
+                while True:
+
+                    try:
+                        audio = self.recognizer.listen(
+                            source,
+                            timeout=None,
+                            phrase_time_limit=3
+                        )
+
+                        text = self.recognizer.recognize_google(audio).lower()
+
+                        print(f"[WAKE HEARD] {text}")
+
+                        for wake_word in WAKE_WORDS:
+                            if wake_word in text:
+                                print("[WAKE] Jarvis activated.")
+                                return True
+
+                    except sr.UnknownValueError:
+                        pass
+
+                    except Exception as e:
+                        print(f"[WAKE ERROR] {e}")
+
+        except Exception as e:
+            print(f"[MIC ERROR] {e}")
+
+        return False
+
 
     # ==============================
     # SPEAK FUNCTION (Neural Male)
