@@ -65,13 +65,108 @@ def process_command(
         if not opened:
             opened = app_controller.open_website(command)
 
+        # ==========================================
+        # YOUTUBE SEARCH
+        # ==========================================
+        if not opened and (
+            "youtube" in command.lower()
+            or "watch" in command.lower()
+        ):
+
+            opened = app_controller.youtube_search(command)
+
+        # ==========================================
+        # SPOTIFY SEARCH
+        # ==========================================
+        if not opened and (
+            "spotify" in command.lower()
+            or "song" in command.lower()
+            or "music" in command.lower()
+        ):
+
+            opened = app_controller.spotify_search(command)
+
+        # ==========================================
+        # AMAZON SEARCH
+        # ==========================================
+        if not opened and (
+            "amazon" in command.lower()
+            or "buy" in command.lower()
+        ):
+
+            opened = app_controller.amazon_search(command)
+
+        # ==========================================
+        # GOOGLE SEARCH FALLBACK
+        # ==========================================
+        if not opened:
+
+            opened = app_controller.google_search(command)
+
+        if not opened:
+            opened = app_controller.google_search(command)
+
         state_manager.set_state(JarvisState.SPEAKING)
 
         if opened:
             voice_engine.speak("Opening as instructed.")
         else:
             voice_engine.speak("Could not find that application.")
+    # ------------------------------
+# SEARCH
+# ------------------------------
+    elif action == "SEARCH":
 
+        state_manager.set_state(JarvisState.EXECUTING)
+
+        searched = False
+
+        # ==========================================
+        # YOUTUBE
+        # ==========================================
+        if (
+            "youtube" in command.lower()
+            or "watch" in command.lower()
+            or "trailer" in command.lower()
+        ):
+
+            searched = app_controller.youtube_search(command)
+
+        # ==========================================
+        # SPOTIFY
+        # ==========================================
+        elif (
+            "spotify" in command.lower()
+            or "song" in command.lower()
+            or "music" in command.lower()
+            or "play" in command.lower()
+        ):
+
+            searched = app_controller.spotify_search(command)
+
+        # ==========================================
+        # AMAZON
+        # ==========================================
+        elif (
+            "amazon" in command.lower()
+            or "buy" in command.lower()
+        ):
+
+            searched = app_controller.amazon_search(command)
+
+        # ==========================================
+        # DEFAULT GOOGLE SEARCH
+        # ==========================================
+        else:
+
+            searched = app_controller.google_search(command)
+
+        state_manager.set_state(JarvisState.SPEAKING)
+
+        if searched:
+            voice_engine.speak("Done.")
+        else:
+            voice_engine.speak("Search failed.")
     # ------------------------------
     # WEATHER
     # ------------------------------
